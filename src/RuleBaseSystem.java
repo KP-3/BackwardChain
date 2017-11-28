@@ -41,7 +41,7 @@ public class RuleBaseSystem {
 		}
 
 		gv.addln(gv.end_graph());
-		System.out.println(gv.getDotSource());
+		//System.out.println(gv.getDotSource());
 		String type = "png";
 		File out = new File("back1." + type); // out.gif in this example
 		gv.writeGraphToFile(gv.getGraph(gv.getDotSource(), type), out);
