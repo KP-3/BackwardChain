@@ -25,14 +25,43 @@ public class RuleBaseSystem {
             }
             rb.backwardChain(queries);
         }
+	    	makegraph();
     }
+	public static void makegraph(){
+
+		GraphViz gv = new GraphViz();
+		gv.addln(gv.start_graph());
+		ArrayList<String> l = RuleBase.graph;
+		for(String l1 :l){
+			gv.addln(l1);
+		}
+		ArrayList<String> list = RuleBase.graph1;
+		for(String l2 :list){
+			gv.addln(l2);
+		}
+
+		gv.addln(gv.end_graph());
+		System.out.println(gv.getDotSource());
+		String type = "png";
+		File out = new File("back1." + type); // out.gif in this example
+		gv.writeGraphToFile(gv.getGraph(gv.getDotSource(), type), out);
+	}
 }
 
 class RuleBase implements Serializable {
     String fileName;
     ArrayList<String> wm;
     ArrayList<Rule> rules;
-
+    //追加
+    static ArrayList<String> graph=new ArrayList<String>();
+    static ArrayList<String> graph1=new ArrayList<String>();
+    static ArrayList<String> oldgraph=new ArrayList<String>();
+    static ArrayList<String> oldgraph1=new ArrayList<String>();
+    static ArrayList<String> oldgraph2=new ArrayList<String>();
+    static ArrayList<String> oldgraph3=new ArrayList<String>();
+    static ArrayList<String> name=new ArrayList<String>();
+    static HashMap<String ,String> hash=new HashMap<String ,String>();
+    int count=0;
     RuleBase(ArrayList<Rule> theRules, ArrayList<String> theWm) {
         wm = theWm;
         rules = theRules;
@@ -93,6 +122,15 @@ class RuleBase implements Serializable {
                     String value = (String) theBinding.get(key);
                     orgBinding.put(key, value);
                 }
+		    //元のノード関係をとっておく
+			oldgraph2.clear();
+			oldgraph3.clear();
+			for(String l:oldgraph){
+				oldgraph2.add(l);
+			}
+			for(String l:oldgraph1){
+				oldgraph3.add(l);
+			}
                 int tmpPoint = matchingPatternOne(firstPattern, theBinding, cPoint);
                 System.out.println("tmpPoint: " + tmpPoint);
                 if (tmpPoint != -1) {
@@ -105,6 +143,15 @@ class RuleBase implements Serializable {
                         //choiceポイントを進める
                         cPoint = tmpPoint;
                         // 失敗したのでバインディングを戻す
+			    	              //ノード関係の復元
+	  			oldgraph.clear();
+				oldgraph1.clear();
+				for(String l:oldgraph2){
+					oldgraph.add(l);
+				}
+				for(String l:oldgraph3){
+					oldgraph1.add(l);
+				}
                         theBinding.clear();
                         for (Iterator<String> i = orgBinding.keySet().iterator(); i.hasNext(); ) {
                             String key = i.next();
@@ -115,6 +162,16 @@ class RuleBase implements Serializable {
                 } else {
                     // 失敗したのでバインディングを戻す
                     theBinding.clear();
+				          //追加
+	          //ノード関係の復元
+				oldgraph.clear();
+				oldgraph1.clear();
+				for(String l:oldgraph2){
+					oldgraph.add(l);
+				}
+				for(String l:oldgraph3){
+					oldgraph1.add(l);
+				}
                     for (Iterator<String> i = orgBinding.keySet().iterator(); i.hasNext(); ) {
                         String key = i.next();
                         String value = orgBinding.get(key);
@@ -143,7 +200,28 @@ class RuleBase implements Serializable {
                         theBinding)) {
                     System.out.println("Success WM");
                     System.out.println((String) wm.get(i) + " <=> " + thePattern);
-                    return i + 1;
+                    String m="";
+		String label="[label =\""+thePattern+"\"]";
+		String m1="";
+		boolean check =false;
+		for(String l:name){
+			if(label.equals(l)){
+				check=true;
+			}
+		}
+		if(check){
+			m="\""+hash.get(label)+"\""+label;
+			m1=hash.get(label);
+		}else{
+		 m="\"b"+Integer.toString(count)+"\""+"[label=\""+thePattern+"\"]";
+		 m1="b"+Integer.toString(count);
+		}
+		String n="\"d"+Integer.toString(count)+"\""+"[label =\""+(String)wm.get(i)+"\"]";
+		
+		graph.add(m+"->"+n);
+		graph1.add(m1+"->"+"d"+Integer.toString(count));
+		count++;
+			return i + 1;
                 }
             }
         }
@@ -163,12 +241,64 @@ class RuleBase implements Serializable {
                         theBinding)) {
                     System.out.println("Success RULE");
                     System.out.println("Rule:" + aRule + " <=> " + thePattern);
+			ArrayList<String> antecedents = aRule.getAntecedents();
+		String consequent = aRule.getConsequent();
+		String m="";
+		String label="[label =\""+thePattern+"\"]";
+		String m1="";
+		boolean check =false;
+		for(String l:name){
+			if(label.equals(l)){
+				check=true;
+			}
+		}
+		if(check){
+			m="\""+hash.get(label)+"\""+label;
+			m1=hash.get(label);
+		}else{
+		 m="\"b"+Integer.toString(count)+"\""+"[label=\""+thePattern+"\"]";
+		 m1="b"+Integer.toString(count);
+		}
+		String n="\"a"+Integer.toString(count)+"\"[shape=record,label=\"{"+aRule.getName()+"|if";
+		String a="a"+Integer.toString(count);
+		for(String l:antecedents){
+			n+=l+"|";
+		}
+		n+="then"+consequent;
+		n+="}\"]";
+		System.out.println(n);
+		oldgraph.clear();
+		oldgraph1.clear();
+		for(String l:graph){
+			oldgraph.add(l);
+		}
+		for(String l:graph1){
+			oldgraph1.add(l);
+		}
+		graph.add(m+"->"+n);
+		graph1.add(m1+"->"+a);
+		for(String n1:antecedents){
+			String n2="\"c"+Integer.toString(count)+"\""+"[label=\""+n1+"\"]";
+			name.add("[label =\""+n1+"\"]");
+			hash.put("[label =\""+n1+"\"]","c"+Integer.toString(count));
+			graph1.add(a+"->"+"c"+Integer.toString(count));
+			count++;
+		graph.add(n+"->"+n2);
+		}
                     // さらにbackwardChaining
                     ArrayList<String> newPatterns = aRule.getAntecedents();
                     if (matchingPatterns(newPatterns, theBinding)) {
                         return wm.size() + i + 1;
                     } else {
                         // 失敗したら元に戻す．
+			    			graph.clear();
+			graph1.clear();
+			for(String l:oldgraph){
+				graph.add(l);
+			}
+			for(String l:oldgraph1){
+				graph1.add(l);
+			}
                         theBinding.clear();
                         for (Iterator<String> itr = orgBinding.keySet().iterator(); itr.hasNext(); ) {
                             String key = itr.next();
