@@ -30,18 +30,19 @@ public class RuleBaseSystem {
 //            }
 //            rb.backwardChain(queries);
             // ファイル名指定
-            String wmFileName = "InsectWm.data";
-            String rbFileName = "Insect.data";
+            String wmFileName = "CarShopWm.data";
+            String rbFileName = "CarShop.data";
 
             String question = args[0]; // 第1引数に検証したい仮説
             // 正規表現のパターンを作成
             Pattern pat1 = Pattern.compile("What is [a-z]*");
             Matcher mat1 = pat1.matcher(question);
-            Pattern pat2 = Pattern.compile("Does [a-zA-z]* have [a-z]*");
+            Pattern pat2 = Pattern.compile("Does [a-zA-Z]* have [a-z]*");
             Matcher mat2 = pat2.matcher(question);
-            // isの質問
-            Pattern pat3 = Pattern.compile("How many [a-z]* does [a-zA-Z]* have");
+            Pattern pat3 = Pattern.compile("Is [a-zA-Z]* [a-z]*");
             Matcher mat3 = pat3.matcher(question);
+            Pattern pat4 = Pattern.compile("How many [a-z]* does [a-zA-Z]* have");
+            Matcher mat4 = pat4.matcher(question);
 //            Pattern pat4 = Pattern.compile("Is it [a-z]*");
 //            Matcher mat4 = pat4.matcher(args[0]);
             String hypothesis = null;
@@ -49,7 +50,7 @@ public class RuleBaseSystem {
             String subject = null; // 主語
             String object = null; // 目的語
             int mode = 0;
-            if (mat1.find()) { // What is ~ ?
+            if (mat1.find()) { // What is ~ ? ifのアサーションを全て出力
                 subject = question.substring(8);
                 hypothesis = "?x is " + subject;
                 mode = 1;
@@ -59,12 +60,18 @@ public class RuleBaseSystem {
                 object = question.substring(question.indexOf("have") + 5);
                 que = " has " + object;
                 mode = 2;
-            } else if (mat3.find()) { // How many ~ does ~ have ?
+            } else if (mat3.find()) { // Is ~ ~ ?
+                subject = question.substring(3).substring(0, question.substring(3).indexOf(" "));
+                hypothesis = "?x is a " + subject;
+                object = question.substring(3).substring(question.substring(3).indexOf(" "));
+                que = " is a" + object;
+                mode = 3;
+            } else if (mat4.find()) { // How many ~ does ~ have ?
                 subject = question.substring(question.indexOf("does") + 5, question.indexOf("have") - 1);
                 hypothesis = "?x is a " + subject;
                 object = question.substring(9, question.indexOf("does") - 1);
                 que = " has " + object;
-                mode = 3;
+                mode = 4;
             }
 //            hypothesis = "?x is a Carolla Wagon";
 //            que = "his-car has several seats";
@@ -74,6 +81,7 @@ public class RuleBaseSystem {
             System.out.println(Integer.toString(mode));
             backward(wmFileName, rbFileName, hypothesis, que, mode);
         }
+        makegraph();
     }
 
     public static void backward(String wmFileName, String rbFileName, String hypothesis, String que, int mode) {
@@ -90,14 +98,26 @@ public class RuleBaseSystem {
             queries.add(st.nextToken());
         }
         ArrayList<String> theFired = rb.backwardChain(queries); // 後向き推論の実行
-        que = theFired.get(0).substring(0, theFired.get(0).indexOf(" ")) + que;
+        if (mode != 1) {
+            que = theFired.get(0).substring(0, theFired.get(0).indexOf(" ")) + que;
+        }
         System.out.println(que);
         if (mode == 1) {
-            if (theFired.contains(que)) {
-                System.out.println("Exists");
-            } else {
-                System.out.println("Not Exists");
+            String subject = hypothesis.substring(8); // 主語を取得
+            System.out.println(subject);
+            for (String s : theFired) {
+                if (!s.substring(s.indexOf(" is ") + 1).equals(hypothesis.substring(hypothesis.indexOf(" is ") + 1))) { // theFiredの末尾にはhypothesisが入っている
+                    if (s.contains(" is ")) { // ~ is ~ という形式のアサーションのみ出力
+                        String ans = subject + s.substring(s.indexOf(" is "));
+                        System.out.println(ans);
+                    }
+                }
             }
+//            if (theFired.contains(que)) {
+//                System.out.println("Exists");
+//            } else {
+//                System.out.println("Not Exists");
+//            }
         } else if (mode == 2) {
             Pattern patSubject = Pattern.compile(que.substring(0, que.indexOf("has") + 3));
             System.out.println(patSubject);
@@ -116,6 +136,23 @@ public class RuleBaseSystem {
                 }
             }
         } else if (mode == 3) {
+            Pattern patSubject = Pattern.compile(que.substring(0, que.indexOf("is") + 3));
+            System.out.println(patSubject);
+            Pattern patObject = Pattern.compile(que.substring(que.indexOf("is") + 4));
+            System.out.println(patObject);
+            for (String s : theFired) {
+                Matcher matSubject = patSubject.matcher(s);
+                if (matSubject.find()) {
+                    System.out.println("success");
+                    Matcher matObject = patObject.matcher(s);
+                    if (matObject.find()) {
+                        System.out.println("Exists");
+                    } else {
+                        System.out.println("Not Exists");
+                    }
+                }
+            }
+        } else if (mode == 4) {
             Pattern patSubject = Pattern.compile(que.substring(0, que.indexOf("has") + 3));
             System.out.println(patSubject);
             Pattern patObject = Pattern.compile(que.substring(que.indexOf("has") + 4));
@@ -137,16 +174,45 @@ public class RuleBaseSystem {
                 }
             }
         }
+    }
 
+    public static void makegraph() {
+
+        GraphViz gv = new GraphViz();
+        gv.addln(gv.start_graph());
+        ArrayList<String> l = RuleBase.graph;
+        for (String l1 : l) {
+            gv.addln(l1);
+        }
+        ArrayList<String> list = RuleBase.graph1;
+        for (String l2 : list) {
+            gv.addln(l2);
+        }
+
+        gv.addln(gv.end_graph());
+        //System.out.println(gv.getDotSource());
+        String type = "png";
+        File out = new File("back1." + type); // out.gif in this example
+        gv.writeGraphToFile(gv.getGraph(gv.getDotSource(), type), out);
+    }
 
 //        System.out.println(rb.theFired.toString());
-    }
 }
 
 class RuleBase implements Serializable {
     String fileName;
     ArrayList<String> wm;
     ArrayList<Rule> rules;
+    //追加
+    static ArrayList<String> graph = new ArrayList<String>();
+    static ArrayList<String> graph1 = new ArrayList<String>();
+    static ArrayList<String> oldgraph = new ArrayList<String>();
+    static ArrayList<String> oldgraph1 = new ArrayList<String>();
+    static ArrayList<String> oldgraph2 = new ArrayList<String>();
+    static ArrayList<String> oldgraph3 = new ArrayList<String>();
+    static ArrayList<String> name = new ArrayList<String>();
+    static HashMap<String, String> hash = new HashMap<String, String>();
+    int count = 0;
 
     RuleBase(ArrayList<Rule> theRules, ArrayList<String> theWm) {
         wm = theWm;
@@ -215,6 +281,15 @@ class RuleBase implements Serializable {
                     orgBinding.put(key, value);
                 }
                 ArrayList<String> orgFired = theFired; // 元のtheFiredを取っておく
+                //元のノード関係をとっておく
+                oldgraph2.clear();
+                oldgraph3.clear();
+                for (String l : oldgraph) {
+                    oldgraph2.add(l);
+                }
+                for (String l : oldgraph1) {
+                    oldgraph3.add(l);
+                }
                 int tmpPoint = matchingPatternOne(firstPattern, theBinding, cPoint, theFired);
                 System.out.println("tmpPoint: " + tmpPoint);
                 if (tmpPoint != -1) {
@@ -240,6 +315,15 @@ class RuleBase implements Serializable {
                         }
 //                        theFired = orgFired; // 失敗したら元に戻す
                         theFired.clear();
+                        //ノード関係の復元
+                        oldgraph.clear();
+                        oldgraph1.clear();
+                        for (String l : oldgraph2) {
+                            oldgraph.add(l);
+                        }
+                        for (String l : oldgraph3) {
+                            oldgraph1.add(l);
+                        }
                     }
                 } else {
                     // 失敗したのでバインディングを戻す
@@ -250,6 +334,15 @@ class RuleBase implements Serializable {
                         theBinding.put(key, value);
                     }
                     theFired.clear();
+                    //ノード関係の復元
+                    oldgraph.clear();
+                    oldgraph1.clear();
+                    for (String l : oldgraph2) {
+                        oldgraph.add(l);
+                    }
+                    for (String l : oldgraph3) {
+                        oldgraph1.add(l);
+                    }
                     return false;
                 }
             }
@@ -273,6 +366,27 @@ class RuleBase implements Serializable {
                     System.out.println((String) wm.get(i) + " <=> " + thePattern);
                     theFired.add(wm.get(i)); // 発火したアサーションを追加
                     System.out.println("theFired: " + theFired.toString());
+                    String m = "";
+                    String label = "[label =\"" + thePattern + "\"]";
+                    String m1 = "";
+                    boolean check = false;
+                    for (String l : name) {
+                        if (label.equals(l)) {
+                            check = true;
+                        }
+                    }
+                    if (check) {
+                        m = "\"" + hash.get(label) + "\"" + label;
+                        m1 = hash.get(label);
+                    } else {
+                        m = "\"b" + Integer.toString(count) + "\"" + "[label=\"" + thePattern + "\"]";
+                        m1 = "b" + Integer.toString(count);
+                    }
+                    String n = "\"d" + Integer.toString(count) + "\"" + "[label =\"" + (String) wm.get(i) + "\"]";
+
+                    graph.add(m + "->" + n);
+                    graph1.add(m1 + "->" + "d" + Integer.toString(count));
+                    count++;
                     return i + 1;
                 }
             }
@@ -292,6 +406,50 @@ class RuleBase implements Serializable {
                 if ((new Unifier()).unify(thePattern, (String) aRule.getConsequent(), theBinding)) {
                     System.out.println("Success RULE");
                     System.out.println("Rule:" + aRule + " <=> " + thePattern);
+                    ArrayList<String> antecedents = aRule.getAntecedents();
+                    String consequent = aRule.getConsequent();
+                    String m = "";
+                    String label = "[label =\"" + thePattern + "\"]";
+                    String m1 = "";
+                    boolean check = false;
+                    for (String l : name) {
+                        if (label.equals(l)) {
+                            check = true;
+                        }
+                    }
+                    if (check) {
+                        m = "\"" + hash.get(label) + "\"" + label;
+                        m1 = hash.get(label);
+                    } else {
+                        m = "\"b" + Integer.toString(count) + "\"" + "[label=\"" + thePattern + "\"]";
+                        m1 = "b" + Integer.toString(count);
+                    }
+                    String n = "\"a" + Integer.toString(count) + "\"[shape=record,label=\"{" + aRule.getName() + "|if";
+                    String a = "a" + Integer.toString(count);
+                    for (String l : antecedents) {
+                        n += l + "|";
+                    }
+                    n += "then" + consequent;
+                    n += "}\"]";
+                    System.out.println(n);
+                    oldgraph.clear();
+                    oldgraph1.clear();
+                    for (String l : graph) {
+                        oldgraph.add(l);
+                    }
+                    for (String l : graph1) {
+                        oldgraph1.add(l);
+                    }
+                    graph.add(m + "->" + n);
+                    graph1.add(m1 + "->" + a);
+                    for (String n1 : antecedents) {
+                        String n2 = "\"c" + Integer.toString(count) + "\"" + "[label=\"" + n1 + "\"]";
+                        name.add("[label =\"" + n1 + "\"]");
+                        hash.put("[label =\"" + n1 + "\"]", "c" + Integer.toString(count));
+                        graph1.add(a + "->" + "c" + Integer.toString(count));
+                        count++;
+                        graph.add(n + "->" + n2);
+                    }
                     // さらにbackwardChaining
                     ArrayList<String> newPatterns = aRule.getAntecedents();
                     System.out.println("newPatterns: " + newPatterns.toString());
@@ -308,6 +466,14 @@ class RuleBase implements Serializable {
                         }
 //                        theFired = orgFired; // 失敗したら元に戻す
                         theFired.clear();
+                        graph.clear();
+                        graph1.clear();
+                        for (String l : oldgraph) {
+                            graph.add(l);
+                        }
+                        for (String l : oldgraph1) {
+                            graph1.add(l);
+                        }
                     }
                 }
             }
@@ -471,8 +637,7 @@ class Rule implements Serializable {
     private HashMap<String, String> makeRenamedVarsTable(ArrayList<String> vars, int uniqueNum) {
         HashMap<String, String> result = new HashMap<String, String>();
         for (int i = 0; i < vars.size(); i++) {
-            String newVar =
-                    (String) vars.get(i) + uniqueNum;
+            String newVar = (String) vars.get(i) + uniqueNum;
             result.put((String) vars.get(i), newVar);
         }
         return result;
