@@ -51,7 +51,7 @@ public class RuleBaseSystem {
             String object = null; // 目的語
             int mode = 0;
             if (mat1.find()) { // What is ~ ? ifのアサーションを全て出力
-                subject = question.substring(8, question.length()-2);
+                subject = question.substring(8, question.length() - 2);
                 hypothesis = "?x is " + subject;
                 mode = 1;
             } else if (mat2.find()) { // Does ~ have ~ ?
@@ -75,7 +75,7 @@ public class RuleBaseSystem {
             }
 //            hypothesis = "?x is a Carolla Wagon";
 //            que = "his-car has several seats";
-            System.out.println("Question:"+question);
+            System.out.println("Question:" + question);
 //            System.out.println(hypothesis);
 //            System.out.println(que);
 //            System.out.println(Integer.toString(mode));
@@ -131,7 +131,7 @@ public class RuleBaseSystem {
                     Matcher matObject = patObject.matcher(s);
                     if (matObject.find()) {
 //                        System.out.println("Exists");
-                    	System.out.println("Yes, it has.");
+                        System.out.println("Yes, it has.");
                     }
                 }
             }
@@ -147,7 +147,7 @@ public class RuleBaseSystem {
                     Matcher matObject = patObject.matcher(s);
                     if (matObject.find()) {
 //                        System.out.println("Exists");
-                    	System.out.println("Yes, it is.");
+                        System.out.println("Yes, it is.");
                     }
                 }
             }
@@ -166,7 +166,7 @@ public class RuleBaseSystem {
                         s = s.replaceAll(patSubject.toString(), "");
                         s = s.replaceAll("-" + patObject.toString(), "");
                         s = s.replaceAll(" ", "");
-                        System.out.println(patSubject + " " +s + " " + patObject + ".");
+                        System.out.println(patSubject + " " + s + " " + patObject + ".");
                     } else {
 //                        System.out.println("Not Exists");
                     }
